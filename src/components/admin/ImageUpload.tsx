@@ -8,62 +8,48 @@ type Props = {
   onChange: (urls: string[]) => void;
 };
 
-// Resize + convert to base64 (fallback when Vercel Blob not configured)
-async function compressToBase64(file: File, maxWidth = 800, quality = 0.72): Promise<string> {
+async function compressToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new window.Image();
-      img.onload = () => {
-        let { width, height } = img;
-        if (width > maxWidth) {
-          height = Math.round((height / width) * maxWidth);
-          width = maxWidth;
-        }
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) { reject(new Error("Canvas indisponível")); return; }
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL("image/jpeg", quality));
-      };
-      img.onerror = () => reject(new Error("Erro ao ler imagem"));
-      img.src = e.target?.result as string;
+    const img = new window.Image();
+    const tempUrl = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(tempUrl);
+      const MAX_W = 1200;
+      let { width, height } = img;
+      if (width > MAX_W) {
+        height = Math.round((height / width) * MAX_W);
+        width = MAX_W;
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { reject(new Error("Canvas indisponível")); return; }
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL("image/jpeg", 0.82));
     };
-    reader.onerror = () => reject(new Error("Erro ao ler arquivo"));
-    reader.readAsDataURL(file);
+
+    img.onerror = () => {
+      URL.revokeObjectURL(tempUrl);
+      reject(new Error("Erro ao ler imagem"));
+    };
+    img.src = tempUrl;
   });
 }
 
-// Upload to Vercel Blob via our API route
-async function uploadToBlob(file: File): Promise<string | null> {
-  const formData = new FormData();
-  formData.append("file", file);
+async function uploadToServer(file: File): Promise<string | null> {
+  const form = new FormData();
+  form.append("file", file);
   try {
-    const res = await fetch("/api/upload", { method: "POST", body: formData });
-    if (!res.ok) return null;
+    const res = await fetch("/api/upload", { method: "POST", body: form });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (data.error === "BLOB_NOT_CONFIGURED") return null;
+      throw new Error(data.error ?? "Falha no upload");
+    }
     const data = await res.json();
-    return data.url ?? null;
-  } catch {
-    return null;
-  }
-}
-
-// Try Cloudinary if configured
-async function uploadToCloudinary(file: File): Promise<string | null> {
-  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-  const preset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
-  if (!cloudName || !preset) return null;
-  const fd = new FormData();
-  fd.append("file", file);
-  fd.append("upload_preset", preset);
-  fd.append("folder", "exclusive-multimarcas");
-  try {
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, { method: "POST", body: fd });
-    if (!res.ok) return null;
-    const d = await res.json();
-    return d.secure_url ?? null;
+    return data.url as string;
   } catch {
     return null;
   }
@@ -72,42 +58,35 @@ async function uploadToCloudinary(file: File): Promise<string | null> {
 export default function ImageUpload({ value, onChange }: Props) {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState(false);
 
   const handleFiles = useCallback(
     async (files: FileList | null) => {
       if (!files || files.length === 0) return;
+
       const imageFiles = Array.from(files).filter((f) => f.type.startsWith("image/"));
       if (imageFiles.length === 0) return;
 
       setUploading(true);
-      setError(null);
+      setWarning(false);
 
       try {
         const results = await Promise.all(
           imageFiles.map(async (file) => {
-            // 1. Tentar Cloudinary
-            const fromCloudinary = await uploadToCloudinary(file);
-            if (fromCloudinary) return fromCloudinary;
+            // Tenta upload via Vercel Blob (CDN permanente)
+            const serverUrl = await uploadToServer(file);
+            if (serverUrl) return serverUrl;
 
-            // 2. Tentar Vercel Blob
-            const fromBlob = await uploadToBlob(file);
-            if (fromBlob) return fromBlob;
-
-            // 3. Fallback: base64 comprimido (baixa resolução para caber no banco)
-            return compressToBase64(file, 700, 0.65);
+            // Fallback: base64 comprimido (funciona sem CDN configurado)
+            setWarning(true);
+            return compressToBase64(file);
           })
         );
 
         const validUrls = results.filter(Boolean) as string[];
-        if (validUrls.length === 0) {
-          setError("Nenhuma imagem foi processada.");
-          return;
-        }
         onChange([...value, ...validUrls]);
       } catch (err) {
-        console.error("Erro no upload:", err);
-        setError("Erro ao processar imagem. Tente novamente.");
+        console.error("Erro ao processar imagens:", err);
       } finally {
         setUploading(false);
       }
@@ -125,16 +104,27 @@ export default function ImageUpload({ value, onChange }: Props) {
     onChange(updated);
   };
 
+  const isBase64 = (url: string) => url.startsWith("data:");
+  const isBlobUrl = (url: string) => url.startsWith("blob:");
+
   return (
     <div className="space-y-3">
+      {warning && (
+        <div className="flex items-start gap-2 bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-sm text-yellow-800">
+          <AlertCircle size={16} className="mt-0.5 shrink-0 text-yellow-600" />
+          <div>
+            <strong>Armazenamento CDN não configurado.</strong> A imagem foi salva localmente no banco de dados.
+            Para usar CDN permanente, configure o Vercel Blob Storage nas configurações do projeto.
+          </div>
+        </div>
+      )}
+
       {/* Upload area */}
       <label
         className={`flex flex-col items-center justify-center border-2 border-dashed rounded-xl p-6 cursor-pointer transition-all ${
           dragOver
             ? "border-yellow-400 bg-yellow-50"
-            : uploading
-            ? "border-slate-200 bg-slate-50 cursor-wait"
-            : "border-slate-300 hover:border-yellow-400 bg-slate-50"
+            : "border-slate-300 hover:border-slate-400 bg-slate-50"
         }`}
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
@@ -155,8 +145,7 @@ export default function ImageUpload({ value, onChange }: Props) {
         {uploading ? (
           <div className="flex flex-col items-center gap-2 text-slate-500">
             <Loader2 size={24} className="animate-spin text-yellow-500" />
-            <span className="text-sm font-medium">Enviando imagens...</span>
-            <span className="text-xs text-slate-400">Aguarde, não feche a página</span>
+            <span className="text-sm font-medium">Enviando para CDN...</span>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2 text-slate-500">
@@ -167,29 +156,28 @@ export default function ImageUpload({ value, onChange }: Props) {
               <p className="text-sm font-medium text-slate-700">
                 Arraste fotos ou <span className="text-yellow-600">clique para selecionar</span>
               </p>
-              <p className="text-xs text-slate-400 mt-0.5">JPG, PNG, WebP · Múltiplas imagens aceitas</p>
+              <p className="text-xs text-slate-400 mt-0.5">JPG, PNG, WebP · Múltiplas imagens</p>
             </div>
           </div>
         )}
       </label>
-
-      {/* Error message */}
-      {error && (
-        <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-          <AlertCircle size={15} />
-          {error}
-        </div>
-      )}
 
       {/* Preview grid */}
       {value.length > 0 && (
         <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
           {value.map((url, i) => (
             <div
-              key={`${i}-${url.slice(-10)}`}
-              className="relative group aspect-video rounded-lg overflow-hidden bg-slate-100 border border-slate-200"
+              key={i}
+              className={`relative group aspect-video rounded-lg overflow-hidden bg-slate-100 border-2 ${
+                isBlobUrl(url) ? "border-red-300" : "border-slate-200"
+              }`}
             >
-              {url.startsWith("data:") ? (
+              {isBlobUrl(url) ? (
+                <div className="flex flex-col items-center justify-center h-full gap-1 text-red-400 text-[10px] text-center p-1">
+                  <AlertCircle size={18} />
+                  URL expirada
+                </div>
+              ) : isBase64(url) ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={url} alt={`Imagem ${i + 1}`} className="w-full h-full object-cover" />
               ) : (
@@ -202,13 +190,15 @@ export default function ImageUpload({ value, onChange }: Props) {
                   unoptimized
                 />
               )}
-              {i === 0 && (
+
+              {i === 0 && !isBlobUrl(url) && (
                 <span className="absolute top-1 left-1 bg-yellow-500 text-zinc-900 text-[9px] font-bold px-1.5 py-0.5 rounded">
                   CAPA
                 </span>
               )}
+
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
-                {i > 0 && (
+                {i > 0 && !isBlobUrl(url) && (
                   <button
                     type="button"
                     onClick={() => moveImage(i, i - 1)}
@@ -232,7 +222,10 @@ export default function ImageUpload({ value, onChange }: Props) {
 
       {value.length > 0 && (
         <p className="text-xs text-slate-400">
-          {value.length} imagem{value.length !== 1 ? "s" : ""} · A primeira será a capa · Arraste ← para reordenar
+          {value.length} imagem{value.length !== 1 ? "s" : ""} · A primeira será a capa
+          {value.some(isBlobUrl) && (
+            <span className="text-red-500 ml-1">· Remova as imagens com erro e faça upload novamente</span>
+          )}
         </p>
       )}
     </div>

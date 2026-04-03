@@ -18,6 +18,18 @@ const nextConfig: NextConfig = {
         hostname: "*.cloudinary.com",
         pathname: "/**",
       },
+      // Vercel Blob Storage
+      {
+        protocol: "https",
+        hostname: "*.blob.vercel-storage.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "blob.vercel-storage.com",
+        pathname: "/**",
+      },
+      // Outros CDNs comuns
       {
         protocol: "https",
         hostname: "uploadthing.com",
