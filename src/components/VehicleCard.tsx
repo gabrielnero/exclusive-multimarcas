@@ -19,7 +19,15 @@ export default function VehicleCard({ vehicle }: Props) {
     <div className="group bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-zinc-100">
       {/* Image */}
       <div className="relative overflow-hidden h-52 bg-zinc-100">
-        {vehicle.imagens.length > 0 ? (
+        {vehicle.imagens.length > 0 && vehicle.imagens[0].startsWith("data:") && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={vehicle.imagens[0]}
+            alt={`${vehicle.marca} ${vehicle.modelo}`}
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        )}
+        {vehicle.imagens.length > 0 && !vehicle.imagens[0].startsWith("data:") && (
           <Image
             src={vehicle.imagens[0]}
             alt={`${vehicle.marca} ${vehicle.modelo}`}
@@ -27,8 +35,10 @@ export default function VehicleCard({ vehicle }: Props) {
             className="object-cover transition-transform duration-500 group-hover:scale-105"
             loading="lazy"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            unoptimized={!vehicle.imagens[0].includes("unsplash.com")}
           />
-        ) : (
+        )}
+        {vehicle.imagens.length === 0 && (
           <div className="flex items-center justify-center h-full text-zinc-300">
             <svg viewBox="0 0 24 24" fill="currentColor" className="w-16 h-16 opacity-30">
               <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z" />

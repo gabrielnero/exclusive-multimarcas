@@ -1,40 +1,79 @@
 "use client";
 import { useState, useCallback } from "react";
 import Image from "next/image";
-import { Upload, X, Loader2, ImagePlus } from "lucide-react";
+import { X, Loader2, ImagePlus } from "lucide-react";
 
 type Props = {
   value: string[];
   onChange: (urls: string[]) => void;
 };
 
-export default function ImageUpload({ value, onChange }: Props) {
-  const [uploading, setUploading] = useState(false);
-  const [dragOver, setDragOver] = useState(false);
+async function compressAndConvertToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new window.Image();
+    const tempUrl = URL.createObjectURL(file);
 
-  const uploadToCloudinary = async (file: File): Promise<string | null> => {
-    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+    img.onload = () => {
+      URL.revokeObjectURL(tempUrl);
 
-    if (!cloudName || !uploadPreset) {
-      // Fallback: create a mock URL for development
-      return URL.createObjectURL(file);
-    }
+      const MAX_WIDTH = 1200;
+      let { width, height } = img;
 
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("upload_preset", uploadPreset);
-    formData.append("folder", "exclusive-multimarcas");
+      if (width > MAX_WIDTH) {
+        height = Math.round((height / width) * MAX_WIDTH);
+        width = MAX_WIDTH;
+      }
 
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("Canvas não disponível"));
+        return;
+      }
+
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL("image/jpeg", 0.82));
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(tempUrl);
+      reject(new Error("Erro ao ler imagem"));
+    };
+
+    img.src = tempUrl;
+  });
+}
+
+async function uploadToCloudinary(file: File): Promise<string | null> {
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+
+  if (!cloudName || !uploadPreset) return null;
+
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", uploadPreset);
+  formData.append("folder", "exclusive-multimarcas");
+
+  try {
     const res = await fetch(
       `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
       { method: "POST", body: formData }
     );
-
     if (!res.ok) return null;
     const data = await res.json();
-    return data.secure_url;
-  };
+    return data.secure_url as string;
+  } catch {
+    return null;
+  }
+}
+
+export default function ImageUpload({ value, onChange }: Props) {
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
 
   const handleFiles = useCallback(
     async (files: FileList | null) => {
@@ -47,9 +86,21 @@ export default function ImageUpload({ value, onChange }: Props) {
 
       setUploading(true);
       try {
-        const uploads = await Promise.all(imageFiles.map(uploadToCloudinary));
-        const validUrls = uploads.filter(Boolean) as string[];
+        const results = await Promise.all(
+          imageFiles.map(async (file) => {
+            // Tenta Cloudinary primeiro
+            const cloudUrl = await uploadToCloudinary(file);
+            if (cloudUrl) return cloudUrl;
+
+            // Fallback: comprime e converte para base64 (funciona sem configuração)
+            return compressAndConvertToBase64(file);
+          })
+        );
+
+        const validUrls = results.filter(Boolean) as string[];
         onChange([...value, ...validUrls]);
+      } catch (err) {
+        console.error("Erro no upload:", err);
       } finally {
         setUploading(false);
       }
@@ -66,6 +117,8 @@ export default function ImageUpload({ value, onChange }: Props) {
     [updated[from], updated[to]] = [updated[to], updated[from]];
     onChange(updated);
   };
+
+  const isBase64 = (url: string) => url.startsWith("data:");
 
   return (
     <div className="space-y-3">
@@ -95,7 +148,7 @@ export default function ImageUpload({ value, onChange }: Props) {
         {uploading ? (
           <div className="flex flex-col items-center gap-2 text-slate-500">
             <Loader2 size={24} className="animate-spin text-yellow-500" />
-            <span className="text-sm">Enviando imagens...</span>
+            <span className="text-sm font-medium">Processando imagens...</span>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2 text-slate-500">
@@ -117,13 +170,23 @@ export default function ImageUpload({ value, onChange }: Props) {
         <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
           {value.map((url, i) => (
             <div key={i} className="relative group aspect-video rounded-lg overflow-hidden bg-slate-100 border border-slate-200">
-              <Image
-                src={url}
-                alt={`Imagem ${i + 1}`}
-                fill
-                className="object-cover"
-                sizes="150px"
-              />
+              {isBase64(url) ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={url}
+                  alt={`Imagem ${i + 1}`}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <Image
+                  src={url}
+                  alt={`Imagem ${i + 1}`}
+                  fill
+                  className="object-cover"
+                  sizes="150px"
+                  unoptimized
+                />
+              )}
               {i === 0 && (
                 <span className="absolute top-1 left-1 bg-yellow-500 text-zinc-900 text-[9px] font-bold px-1.5 py-0.5 rounded">
                   CAPA
