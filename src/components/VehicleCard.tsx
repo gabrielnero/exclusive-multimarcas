@@ -12,11 +12,12 @@ type Props = {
 
 export default function VehicleCard({ vehicle }: Props) {
   const [favorited, setFavorited] = useState(false);
+  const showKm = vehicle.km > 0;
 
   return (
     <div className="group bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-zinc-100">
       {/* Image */}
-      <div className="relative overflow-hidden h-52">
+      <div className="relative overflow-hidden h-52 bg-zinc-100">
         <Image
           src={vehicle.imagens[0]}
           alt={`${vehicle.marca} ${vehicle.modelo}`}
@@ -34,7 +35,7 @@ export default function VehicleCard({ vehicle }: Props) {
             </span>
           )}
           {vehicle.destaque && !vehicle.oferta && (
-            <span className="bg-yellow-500 text-zinc-900 text-xs font-bold px-2.5 py-1 rounded-full shadow">
+            <span className="bg-orange-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow">
               ⭐ Destaque
             </span>
           )}
@@ -77,9 +78,11 @@ export default function VehicleCard({ vehicle }: Props) {
           <span className="flex items-center gap-1">
             <Calendar size={12} /> {vehicle.ano}
           </span>
-          <span className="flex items-center gap-1">
-            <Gauge size={12} /> {formatKm(vehicle.km)}
-          </span>
+          {showKm && (
+            <span className="flex items-center gap-1">
+              <Gauge size={12} /> {formatKm(vehicle.km)}
+            </span>
+          )}
           <span className="flex items-center gap-1">
             <Fuel size={12} /> {vehicle.combustivel}
           </span>
@@ -88,15 +91,25 @@ export default function VehicleCard({ vehicle }: Props) {
         {/* Price */}
         <div className="flex items-end justify-between">
           <div>
-            <span className="text-xs text-zinc-400">a partir de</span>
-            <p className="text-yellow-600 font-black text-xl leading-tight">
-              {formatCurrency(vehicle.preco)}
-            </p>
-            <span className="text-xs text-zinc-400">ou financie em até 60x</span>
+            {vehicle.precoConsulte || vehicle.preco === 0 ? (
+              <>
+                <span className="text-xs text-zinc-400">valor</span>
+                <p className="text-orange-500 font-black text-xl leading-tight">Consulte</p>
+                <span className="text-xs text-zinc-400">financiamento disponível</span>
+              </>
+            ) : (
+              <>
+                <span className="text-xs text-zinc-400">a partir de</span>
+                <p className="text-orange-600 font-black text-xl leading-tight">
+                  {formatCurrency(vehicle.preco)}
+                </p>
+                <span className="text-xs text-zinc-400">ou financie em até 60x</span>
+              </>
+            )}
           </div>
           <Link
             href={`/veiculo/${vehicle.id}`}
-            className="bg-zinc-900 hover:bg-yellow-500 hover:text-zinc-900 text-white text-xs font-bold px-4 py-2 rounded-full transition-all"
+            className="bg-zinc-900 hover:bg-orange-500 hover:text-white text-white text-xs font-bold px-4 py-2 rounded-full transition-all"
           >
             Ver detalhes
           </Link>

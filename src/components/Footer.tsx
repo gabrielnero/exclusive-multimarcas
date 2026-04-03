@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { MapPin, Phone, Clock } from "lucide-react";
 import { getWhatsAppLink } from "@/utils/whatsapp";
 
@@ -8,19 +9,29 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 py-12 grid grid-cols-1 md:grid-cols-4 gap-8">
         {/* Brand */}
         <div className="md:col-span-1">
-          <div className="mb-3">
-            <span className="text-white text-2xl font-black tracking-wide uppercase block">Exclusive</span>
-            <span className="text-yellow-400 text-xs font-semibold tracking-[0.3em] uppercase">Multimarcas</span>
+          <div className="mb-4">
+            <Image
+              src="/logo.png"
+              alt="Exclusive Multimarcas"
+              width={130}
+              height={52}
+              className="object-contain"
+            />
           </div>
-          <p className="text-sm leading-relaxed text-zinc-500">
-            Sua revenda de confiança em Marau - RS. Qualidade, transparência e os melhores veículos para você.
+          <p className="text-sm leading-relaxed text-zinc-500 mb-4">
+            Sua revenda de confiança em Marau - RS. Qualidade, transparência e os melhores veículos seminovos para você.
           </p>
-          <div className="flex gap-3 mt-4">
-            <a href="#" aria-label="Instagram" className="bg-zinc-800 hover:bg-yellow-500 hover:text-zinc-950 text-zinc-400 p-2 rounded-full transition-all text-xs font-bold w-9 h-9 flex items-center justify-center">
-              IG
-            </a>
-            <a href="#" aria-label="Facebook" className="bg-zinc-800 hover:bg-yellow-500 hover:text-zinc-950 text-zinc-400 p-2 rounded-full transition-all text-xs font-bold w-9 h-9 flex items-center justify-center">
-              FB
+          <div className="flex gap-3 mt-2">
+            <a
+              href="https://instagram.com/exclusivemarau"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-zinc-800 hover:bg-orange-500 hover:text-white text-zinc-400 px-3 py-2 rounded-full transition-all text-xs font-bold flex items-center gap-1.5"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
+                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+              </svg>
+              @exclusivemarau
             </a>
           </div>
         </div>
@@ -32,7 +43,7 @@ export default function Footer() {
             {[["Início", "/"], ["Estoque", "/estoque"], ["Sobre Nós", "/sobre"], ["Contato", "/contato"]].map(
               ([label, href]) => (
                 <li key={href}>
-                  <Link href={href} className="hover:text-yellow-400 transition-colors">
+                  <Link href={href} className="hover:text-orange-400 transition-colors">
                     {label}
                   </Link>
                 </li>
@@ -46,17 +57,17 @@ export default function Footer() {
           <h4 className="text-white font-semibold mb-4 text-sm uppercase tracking-wider">Contato</h4>
           <ul className="space-y-3 text-sm">
             <li className="flex items-start gap-2">
-              <MapPin size={15} className="mt-0.5 text-yellow-500 shrink-0" />
-              <span>Rua das Acácias, 1234 – Centro, Marau – RS, 99150-000</span>
+              <MapPin size={15} className="mt-0.5 text-orange-500 shrink-0" />
+              <span>Marau – RS</span>
             </li>
             <li className="flex items-center gap-2">
-              <Phone size={15} className="text-yellow-500 shrink-0" />
-              <a href="tel:+5554999999999" className="hover:text-yellow-400 transition-colors">
-                (54) 99999-9999
+              <Phone size={15} className="text-orange-500 shrink-0" />
+              <a href="tel:+5554996083808" className="hover:text-orange-400 transition-colors">
+                (54) 99608-3808
               </a>
             </li>
             <li className="flex items-start gap-2">
-              <Clock size={15} className="mt-0.5 text-yellow-500 shrink-0" />
+              <Clock size={15} className="mt-0.5 text-orange-500 shrink-0" />
               <span>
                 Seg–Sex: 08h às 18h
                 <br />
@@ -70,7 +81,7 @@ export default function Footer() {
         <div>
           <h4 className="text-white font-semibold mb-4 text-sm uppercase tracking-wider">Fale Agora</h4>
           <p className="text-sm mb-4 text-zinc-500">
-            Atendimento rápido e sem burocracia. Nossos consultores estão prontos para te ajudar!
+            Atendimento rápido e direto. Nossos consultores estão prontos para te ajudar a fechar o melhor negócio!
           </p>
           <a
             href={getWhatsAppLink()}
