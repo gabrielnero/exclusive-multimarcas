@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String   @default("Admin")
+  createdAt DateTime @default(now())
+}
+
+model Vehicle {
+  id          String   @id @default(cuid())
+  marca       String
+  modelo      String
+  versao      String   @default("")
+  ano         Int
+  preco       Float
+  km          Int
+  combustivel String
+  cambio      String
+  cor         String
+  tipo        String   @default("Sedan")
+  descricao   String   @default("")
+  opcionais   String[]
+  imagens     String[]
+  destaque    Boolean  @default(false)
+  oferta      Boolean  @default(false)
+  vendido     Boolean  @default(false)
+  leads       Lead[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Lead {
+  id        String   @id @default(cuid())
+  nome      String
+  telefone  String
+  mensagem  String   @default("")
+  vehicleId String?
+  vehicle   Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  status    String   @default("novo")
+  createdAt DateTime @default(now())
+}
+
+model Settings {
+  id        String @id @default("singleton")
+  nomeLoja  String @default("Exclusive Multimarcas")
+  descricao String @default("")
+  whatsapp  String @default("")
+  endereco  String @default("")
+  instagram String @default("")
+  facebook  String @default("")
+  seoTitle  String @default("")
+  seoDesc   String @default("")
+}
