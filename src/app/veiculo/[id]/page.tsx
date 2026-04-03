@@ -10,48 +10,93 @@ import {
   CheckCircle,
   ChevronRight,
   ArrowLeft,
-  Share2,
 } from "lucide-react";
-import { vehicles } from "@/data/vehicles";
+import { prisma } from "@/lib/prisma";
 import { formatCurrency, formatKm } from "@/utils/format";
 import { getVehicleWhatsAppLink } from "@/utils/whatsapp";
 import VehicleGallery from "@/components/VehicleGallery";
 import FinancingSimulator from "@/components/FinancingSimulator";
 import VehicleCard from "@/components/VehicleCard";
 
+export const dynamic = "force-dynamic";
+
 type Props = {
   params: Promise<{ id: string }>;
 };
 
-export async function generateStaticParams() {
-  return vehicles.map((v) => ({ id: v.id }));
-}
-
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const vehicle = vehicles.find((v) => v.id === id);
+  const vehicle = await prisma.vehicle.findUnique({ where: { id } });
   if (!vehicle) return { title: "Veículo não encontrado" };
 
   return {
-    title: `${vehicle.marca} ${vehicle.modelo} ${vehicle.ano} - ${formatCurrency(vehicle.preco)}`,
-    description: `${vehicle.marca} ${vehicle.modelo} ${vehicle.versao} ${vehicle.ano}, ${formatKm(vehicle.km)}, ${vehicle.combustivel}, ${vehicle.cambio}. ${vehicle.descricao.slice(0, 100)}...`,
+    title: `${vehicle.marca} ${vehicle.modelo} ${vehicle.ano}${vehicle.preco > 0 ? ` - ${formatCurrency(vehicle.preco)}` : ""}`,
+    description: `${vehicle.marca} ${vehicle.modelo} ${vehicle.versao} ${vehicle.ano}, ${vehicle.combustivel}, ${vehicle.cambio}. ${vehicle.descricao.slice(0, 120)}...`,
   };
 }
 
 export default async function VehicleDetailPage({ params }: Props) {
   const { id } = await params;
-  const vehicle = vehicles.find((v) => v.id === id);
+
+  const vehicle = await prisma.vehicle.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      marca: true,
+      modelo: true,
+      versao: true,
+      ano: true,
+      preco: true,
+      km: true,
+      combustivel: true,
+      cambio: true,
+      cor: true,
+      tipo: true,
+      descricao: true,
+      opcionais: true,
+      imagens: true,
+      destaque: true,
+      oferta: true,
+      vendido: true,
+    },
+  });
+
   if (!vehicle) notFound();
 
-  const similar = vehicles
-    .filter((v) => v.id !== vehicle.id && (v.tipo === vehicle.tipo || v.marca === vehicle.marca))
-    .slice(0, 3);
+  const similar = await prisma.vehicle.findMany({
+    where: {
+      id: { not: id },
+      vendido: false,
+      OR: [{ tipo: vehicle.tipo }, { marca: vehicle.marca }],
+    },
+    take: 3,
+    select: {
+      id: true,
+      marca: true,
+      modelo: true,
+      versao: true,
+      ano: true,
+      preco: true,
+      km: true,
+      combustivel: true,
+      cambio: true,
+      cor: true,
+      tipo: true,
+      descricao: true,
+      opcionais: true,
+      imagens: true,
+      destaque: true,
+      oferta: true,
+      vendido: true,
+    },
+  });
 
   const whatsappLink = getVehicleWhatsAppLink(vehicle.marca, vehicle.modelo, vehicle.ano, vehicle.id);
+  const isConsulte = vehicle.preco === 0;
 
   const specs = [
     { icon: <Calendar size={16} />, label: "Ano", value: vehicle.ano.toString() },
-    { icon: <Gauge size={16} />, label: "Quilometragem", value: formatKm(vehicle.km) },
+    ...(vehicle.km > 0 ? [{ icon: <Gauge size={16} />, label: "Quilometragem", value: formatKm(vehicle.km) }] : []),
     { icon: <Fuel size={16} />, label: "Combustível", value: vehicle.combustivel },
     { icon: <Settings size={16} />, label: "Câmbio", value: vehicle.cambio },
     { icon: <Palette size={16} />, label: "Cor", value: vehicle.cor },
@@ -62,9 +107,9 @@ export default async function VehicleDetailPage({ params }: Props) {
       {/* Breadcrumb */}
       <div className="bg-white border-b border-zinc-100 py-3 px-4">
         <div className="max-w-7xl mx-auto flex items-center gap-2 text-sm text-zinc-400">
-          <Link href="/" className="hover:text-yellow-500 transition-colors">Início</Link>
+          <Link href="/" className="hover:text-orange-500 transition-colors">Início</Link>
           <ChevronRight size={14} />
-          <Link href="/estoque" className="hover:text-yellow-500 transition-colors">Estoque</Link>
+          <Link href="/estoque" className="hover:text-orange-500 transition-colors">Estoque</Link>
           <ChevronRight size={14} />
           <span className="text-zinc-700 font-medium">{vehicle.marca} {vehicle.modelo}</span>
         </div>
@@ -91,10 +136,7 @@ export default async function VehicleDetailPage({ params }: Props) {
                       <span className="bg-red-100 text-red-600 text-xs font-bold px-2.5 py-1 rounded-full">🔥 Oferta</span>
                     )}
                     {vehicle.destaque && (
-                      <span className="bg-yellow-100 text-yellow-700 text-xs font-bold px-2.5 py-1 rounded-full">⭐ Destaque</span>
-                    )}
-                    {vehicle.uniDisponivel && (
-                      <span className="bg-zinc-900 text-white text-xs font-bold px-2.5 py-1 rounded-full">🔔 Única unidade</span>
+                      <span className="bg-orange-100 text-orange-600 text-xs font-bold px-2.5 py-1 rounded-full">⭐ Destaque</span>
                     )}
                     <span className="bg-zinc-100 text-zinc-600 text-xs font-medium px-2.5 py-1 rounded-full">{vehicle.tipo}</span>
                   </div>
@@ -104,16 +146,13 @@ export default async function VehicleDetailPage({ params }: Props) {
                   </h1>
                   <p className="text-zinc-500 font-medium">{vehicle.versao}</p>
                 </div>
-                <button className="flex items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-700 transition-colors">
-                  <Share2 size={15} /> Compartilhar
-                </button>
               </div>
 
               {/* Specs grid */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
                 {specs.map(({ icon, label, value }) => (
                   <div key={label} className="bg-zinc-50 rounded-xl p-3 flex items-center gap-2.5">
-                    <span className="text-yellow-500">{icon}</span>
+                    <span className="text-orange-500">{icon}</span>
                     <div>
                       <p className="text-xs text-zinc-400">{label}</p>
                       <p className="font-semibold text-zinc-800 text-sm">{value}</p>
@@ -124,33 +163,47 @@ export default async function VehicleDetailPage({ params }: Props) {
             </div>
 
             {/* Description */}
-            <div className="bg-white rounded-2xl p-6 border border-zinc-100">
-              <h2 className="font-bold text-zinc-900 text-lg mb-3">Sobre este veículo</h2>
-              <p className="text-zinc-600 leading-relaxed">{vehicle.descricao}</p>
-            </div>
+            {vehicle.descricao && (
+              <div className="bg-white rounded-2xl p-6 border border-zinc-100">
+                <h2 className="font-bold text-zinc-900 text-lg mb-3">Sobre este veículo</h2>
+                <p className="text-zinc-600 leading-relaxed">{vehicle.descricao}</p>
+              </div>
+            )}
 
             {/* Opcionais */}
-            <div className="bg-white rounded-2xl p-6 border border-zinc-100">
-              <h2 className="font-bold text-zinc-900 text-lg mb-4">Opcionais e Equipamentos</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {vehicle.opcionais.map((op) => (
-                  <div key={op} className="flex items-center gap-2 text-sm text-zinc-700">
-                    <CheckCircle size={15} className="text-green-500 shrink-0" />
-                    {op}
-                  </div>
-                ))}
+            {vehicle.opcionais.length > 0 && (
+              <div className="bg-white rounded-2xl p-6 border border-zinc-100">
+                <h2 className="font-bold text-zinc-900 text-lg mb-4">Opcionais e Equipamentos</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {vehicle.opcionais.map((op) => (
+                    <div key={op} className="flex items-center gap-2 text-sm text-zinc-700">
+                      <CheckCircle size={15} className="text-green-500 shrink-0" />
+                      {op}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Right: Price + Actions */}
           <div className="space-y-4 lg:sticky lg:top-24 h-fit">
             <div className="bg-white rounded-2xl p-6 border border-zinc-100 shadow-sm">
-              <p className="text-zinc-400 text-sm">Preço à vista</p>
-              <p className="text-yellow-600 font-black text-3xl leading-tight">
-                {formatCurrency(vehicle.preco)}
-              </p>
-              <p className="text-zinc-400 text-xs mt-1">ou financie em até 60x</p>
+              {isConsulte ? (
+                <>
+                  <p className="text-zinc-400 text-sm">Valor</p>
+                  <p className="text-orange-500 font-black text-3xl leading-tight">Consulte</p>
+                  <p className="text-zinc-400 text-xs mt-1">financiamento disponível</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-zinc-400 text-sm">Preço à vista</p>
+                  <p className="text-orange-600 font-black text-3xl leading-tight">
+                    {formatCurrency(vehicle.preco)}
+                  </p>
+                  <p className="text-zinc-400 text-xs mt-1">ou financie em até 60x</p>
+                </>
+              )}
 
               <div className="mt-5 space-y-3">
                 <a
@@ -171,16 +224,10 @@ export default async function VehicleDetailPage({ params }: Props) {
                   Solicitar contato
                 </Link>
               </div>
-
-              {vehicle.uniDisponivel && (
-                <div className="mt-4 bg-red-50 border border-red-200 text-red-700 text-xs font-semibold rounded-lg p-3 text-center">
-                  ⚡ Última unidade disponível! Não perca.
-                </div>
-              )}
             </div>
 
-            {/* Financing simulator */}
-            <FinancingSimulator preco={vehicle.preco} />
+            {/* Financing simulator (only if has price) */}
+            {!isConsulte && <FinancingSimulator preco={vehicle.preco} />}
 
             {/* Trust badges */}
             <div className="bg-white rounded-2xl p-5 border border-zinc-100">
@@ -189,9 +236,9 @@ export default async function VehicleDetailPage({ params }: Props) {
                 {[
                   "✅ Procedência verificada",
                   "✅ Documentação em dia",
-                  "✅ Garantia pós-venda",
                   "✅ Financiamento facilitado",
                   "✅ Aceitamos troca",
+                  "✅ 18 anos no mercado",
                 ].map((item) => (
                   <li key={item} className="text-xs text-zinc-600">{item}</li>
                 ))}
@@ -205,7 +252,7 @@ export default async function VehicleDetailPage({ params }: Props) {
           <div className="mt-14">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-black text-zinc-900">Veículos Similares</h2>
-              <Link href="/estoque" className="text-sm text-zinc-500 hover:text-yellow-500 flex items-center gap-1">
+              <Link href="/estoque" className="text-sm text-zinc-500 hover:text-orange-500 flex items-center gap-1">
                 Ver todos <ChevronRight size={14} />
               </Link>
             </div>

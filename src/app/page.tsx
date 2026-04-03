@@ -4,18 +4,42 @@ import {
   Shield,
   CreditCard,
   RefreshCw,
-  Star,
   ChevronRight,
   ArrowRight,
   CheckCircle,
 } from "lucide-react";
 import VehicleCard from "@/components/VehicleCard";
-import { vehicles } from "@/data/vehicles";
+import { prisma } from "@/lib/prisma";
 import { getWhatsAppLink } from "@/utils/whatsapp";
 
-const destaques = vehicles.filter((v) => v.destaque).slice(0, 6);
+export const dynamic = "force-dynamic";
 
-export default function Home() {
+export default async function Home() {
+  const destaques = await prisma.vehicle.findMany({
+    where: { vendido: false },
+    orderBy: [{ destaque: "desc" }, { oferta: "desc" }, { createdAt: "desc" }],
+    take: 6,
+    select: {
+      id: true,
+      marca: true,
+      modelo: true,
+      versao: true,
+      ano: true,
+      preco: true,
+      km: true,
+      combustivel: true,
+      cambio: true,
+      cor: true,
+      tipo: true,
+      descricao: true,
+      opcionais: true,
+      imagens: true,
+      destaque: true,
+      oferta: true,
+      vendido: true,
+    },
+  });
+
   return (
     <>
       {/* ── HERO ── */}
@@ -64,7 +88,7 @@ export default function Home() {
             </div>
 
             <div className="flex gap-8 mt-10">
-              {[["9+", "Anos no mercado"], ["100%", "Procedência garantida"], ["@exclusivemarau", "Instagram"]].map(
+              {[["18+", "Anos no mercado"], ["100%", "Procedência garantida"], ["@exclusivemarau", "Instagram"]].map(
                 ([num, label]) => (
                   <div key={label}>
                     <p className="text-orange-400 font-black text-xl">{num}</p>
@@ -109,35 +133,37 @@ export default function Home() {
       </section>
 
       {/* ── DESTAQUES ── */}
-      <section className="py-16 max-w-7xl mx-auto px-4">
-        <div className="flex items-end justify-between mb-8">
-          <div>
-            <span className="text-orange-500 text-sm font-bold uppercase tracking-widest">Estoque</span>
-            <h2 className="text-3xl font-black text-zinc-900 mt-1">Veículos em Destaque</h2>
+      {destaques.length > 0 && (
+        <section className="py-16 max-w-7xl mx-auto px-4">
+          <div className="flex items-end justify-between mb-8">
+            <div>
+              <span className="text-orange-500 text-sm font-bold uppercase tracking-widest">Estoque</span>
+              <h2 className="text-3xl font-black text-zinc-900 mt-1">Veículos em Destaque</h2>
+            </div>
+            <Link
+              href="/estoque"
+              className="hidden md:flex items-center gap-1 text-sm font-semibold text-zinc-500 hover:text-orange-500 transition-colors"
+            >
+              Ver todos <ChevronRight size={16} />
+            </Link>
           </div>
-          <Link
-            href="/estoque"
-            className="hidden md:flex items-center gap-1 text-sm font-semibold text-zinc-500 hover:text-orange-500 transition-colors"
-          >
-            Ver todos <ChevronRight size={16} />
-          </Link>
-        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {destaques.map((v) => (
-            <VehicleCard key={v.id} vehicle={v} />
-          ))}
-        </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {destaques.map((v) => (
+              <VehicleCard key={v.id} vehicle={v} />
+            ))}
+          </div>
 
-        <div className="mt-8 text-center">
-          <Link
-            href="/estoque"
-            className="inline-flex items-center gap-2 border-2 border-zinc-900 hover:bg-zinc-900 hover:text-white text-zinc-900 font-bold px-8 py-3 rounded-full transition-all"
-          >
-            Ver Estoque Completo <ArrowRight size={16} />
-          </Link>
-        </div>
-      </section>
+          <div className="mt-8 text-center">
+            <Link
+              href="/estoque"
+              className="inline-flex items-center gap-2 border-2 border-zinc-900 hover:bg-zinc-900 hover:text-white text-zinc-900 font-bold px-8 py-3 rounded-full transition-all"
+            >
+              Ver Estoque Completo <ArrowRight size={16} />
+            </Link>
+          </div>
+        </section>
+      )}
 
       {/* ── BANNER CTA ── */}
       <section className="relative overflow-hidden bg-zinc-950 py-16">

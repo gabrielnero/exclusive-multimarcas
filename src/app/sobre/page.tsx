@@ -163,8 +163,8 @@ export default function Sobre() {
                   </div>
                   <div>
                     <p className="font-semibold text-zinc-900">Telefone / WhatsApp</p>
-                    <a href="tel:+5554996083808" className="text-zinc-500 text-sm hover:text-orange-500 transition-colors">
-                      (54) 99608-3808
+                    <a href="tel:+5554334286811" className="text-zinc-500 text-sm hover:text-orange-500 transition-colors">
+                      (54) 3342-8681
                     </a>
                   </div>
                 </li>

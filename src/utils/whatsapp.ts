@@ -1,4 +1,4 @@
-const WHATSAPP_NUMBER = "5554996083808";
+const WHATSAPP_NUMBER = "5554334286811";
 
 export function getWhatsAppLink(message?: string): string {
   const text = message || "Olá! Vim pelo site e gostaria de mais informações sobre os veículos da Exclusive Multimarcas.";

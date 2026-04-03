@@ -3,29 +3,38 @@ import Image from "next/image";
 import Link from "next/link";
 import { Heart, Fuel, Calendar, Gauge } from "lucide-react";
 import { useState } from "react";
-import { Vehicle } from "@/data/vehicles";
+import type { VehiclePublic } from "@/types/vehicle";
 import { formatCurrency, formatKm } from "@/utils/format";
 
 type Props = {
-  vehicle: Vehicle;
+  vehicle: VehiclePublic;
 };
 
 export default function VehicleCard({ vehicle }: Props) {
   const [favorited, setFavorited] = useState(false);
   const showKm = vehicle.km > 0;
+  const isConsulte = vehicle.preco === 0;
 
   return (
     <div className="group bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-zinc-100">
       {/* Image */}
       <div className="relative overflow-hidden h-52 bg-zinc-100">
-        <Image
-          src={vehicle.imagens[0]}
-          alt={`${vehicle.marca} ${vehicle.modelo}`}
-          fill
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
-          loading="lazy"
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-        />
+        {vehicle.imagens.length > 0 ? (
+          <Image
+            src={vehicle.imagens[0]}
+            alt={`${vehicle.marca} ${vehicle.modelo}`}
+            fill
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            loading="lazy"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          />
+        ) : (
+          <div className="flex items-center justify-center h-full text-zinc-300">
+            <svg viewBox="0 0 24 24" fill="currentColor" className="w-16 h-16 opacity-30">
+              <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z" />
+            </svg>
+          </div>
+        )}
 
         {/* Badges */}
         <div className="absolute top-3 left-3 flex flex-col gap-1.5">
@@ -37,11 +46,6 @@ export default function VehicleCard({ vehicle }: Props) {
           {vehicle.destaque && !vehicle.oferta && (
             <span className="bg-orange-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow">
               ⭐ Destaque
-            </span>
-          )}
-          {vehicle.uniDisponivel && (
-            <span className="bg-zinc-900 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow">
-              🔔 Única unidade
             </span>
           )}
         </div>
@@ -91,7 +95,7 @@ export default function VehicleCard({ vehicle }: Props) {
         {/* Price */}
         <div className="flex items-end justify-between">
           <div>
-            {vehicle.precoConsulte || vehicle.preco === 0 ? (
+            {isConsulte ? (
               <>
                 <span className="text-xs text-zinc-400">valor</span>
                 <p className="text-orange-500 font-black text-xl leading-tight">Consulte</p>

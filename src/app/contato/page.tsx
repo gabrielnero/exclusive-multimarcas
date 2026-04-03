@@ -58,10 +58,10 @@ export default function Contato() {
                 <div>
                   <p className="font-bold text-zinc-900">WhatsApp / Telefone</p>
                   <a
-                    href="tel:+5554996083808"
+                    href="tel:+5554334286811"
                     className="text-zinc-500 text-sm hover:text-orange-500 transition-colors mt-0.5 block"
                   >
-                    (54) 99608-3808
+                    (54) 3342-8681
                   </a>
                 </div>
               </li>

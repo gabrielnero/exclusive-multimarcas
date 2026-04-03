@@ -13,8 +13,8 @@ export default function Header() {
       {/* Top bar */}
       <div className="bg-orange-500 text-zinc-950 text-xs font-semibold py-1.5 px-4 text-center">
         📍 Marau - RS &nbsp;|&nbsp; Seg a Sex: 08h–18h &nbsp;|&nbsp; Sáb: 08h–12h &nbsp;|&nbsp;
-        <a href="tel:+5554996083808" className="underline">
-          (54) 99608-3808
+        <a href="tel:+5554334286811" className="underline">
+          (54) 3342-8681
         </a>
       </div>
 
